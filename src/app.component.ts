@@ -57,6 +57,7 @@ import { YoutubeResultListItemComponent } from './components/stream-list-items/y
 import { AcademicResultListItemComponent } from './components/stream-list-items/academic-result-list-item.component.js';
 import { PreferencesDialogComponent } from './components/preferences-dialog/preferences-dialog.component.js';
 import { TerminalComponent } from './components/terminal/terminal.component.js';
+import { SearchService } from './services/search.service.js';
 
 interface PanePath {
   id: number;
@@ -138,6 +139,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private geminiService = inject(GeminiService);
   private youtubeSearchService = inject(YoutubeSearchService);
   private academicSearchService = inject(AcademicSearchService);
+  private searchService = inject(SearchService);
 
   // --- State Management ---
   isSplitView = signal(false);
@@ -693,7 +695,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.mountedProfiles().some(p => p.id === profile.id)) return;
 
     try {
-      const provider = new RemoteFileSystemService(profile, this.fsService);
+      const userForProfile = user ?? this.mountedProfileUsers().get(profile.id);
+      const provider = new RemoteFileSystemService(profile, this.fsService, this.searchService, userForProfile?.alias ?? null);
       const imageUrl = profile.imageUrl || this.localConfigService.defaultImageUrl();
       const profileForImageService = { ...profile, imageUrl };
       const imageService = new ImageService(profileForImageService, this.imageClientService, this.preferencesService);
@@ -714,8 +717,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.connectionStatus.set('connecting');
     try {
       const user = await this.loginService.login(profile, username, password);
-      await this.mountProfile(profile, user);
       this.mountedProfileUsers.update(map => new Map(map).set(profile.id, user));
+      await this.mountProfile(profile, user);
       this.connectionStatus.set('connected');
     } catch (e) {
       const errorMessage = `Login failed for "${profile.name}": ${(e as Error).message}`;
@@ -1238,7 +1241,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.mountedProfileIds().includes(profile.id)) {
       if (this.remoteProviders().has(oldName)) {
         // Recreate the provider with the updated profile.
-        const newProvider = new RemoteFileSystemService(profile, this.fsService);
+        const user = this.mountedProfileUsers().get(profile.id);
+        const newProvider = new RemoteFileSystemService(profile, this.fsService, this.searchService, user?.alias ?? null);
 
         // Re-key the map with the new provider instance.
         this.remoteProviders.update(map => {

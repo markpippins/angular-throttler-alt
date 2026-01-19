@@ -1,5 +1,5 @@
 import { Injectable, signal, effect, inject } from '@angular/core';
-import { FileSystemNode } from '../models/file-system.model.js';
+import { FileSystemNode, SearchResultNode } from '../models/file-system.model.js';
 import { FileSystemProvider, ItemReference } from './file-system-provider.js';
 import { LocalConfigService } from './local-config.service.js';
 import { DbService } from './db.service.js';
@@ -614,5 +614,43 @@ export class SessionService implements FileSystemProvider {
   async saveNote(providerPath: string[], content: string): Promise<void> {
     const fullPath = this.getFullPath(providerPath);
     await this.dbService.saveNote({ path: fullPath.join('/'), content });
+  }
+
+  async search(path: string[], query: string): Promise<SearchResultNode[]> {
+    const root = this.rootNode();
+    const startNode = this.findNodeInTree(root, path);
+
+    if (!startNode) {
+      return [];
+    }
+
+    const results: SearchResultNode[] = [];
+    const lowerCaseQuery = query.toLowerCase();
+
+    const recursiveSearch = (currentNode: FileSystemNode, currentPath: string[]) => {
+      // Check if current node's name matches
+      if (currentNode.name.toLowerCase().includes(lowerCaseQuery)) {
+        results.push({
+          ...cloneNode(currentNode),
+          path: currentPath, // path of parent
+        });
+      }
+      
+      // Recurse into children
+      if (currentNode.type === 'folder' && currentNode.children) {
+        const nextPath = [...currentPath, currentNode.name];
+        for (const child of currentNode.children) {
+          recursiveSearch(child, nextPath);
+        }
+      }
+    };
+
+    if (startNode.children) {
+      for (const child of startNode.children) {
+        recursiveSearch(child, path);
+      }
+    }
+    
+    return results;
   }
 }

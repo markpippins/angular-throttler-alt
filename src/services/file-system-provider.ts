@@ -1,4 +1,4 @@
-import { FileSystemNode, FileType } from '../models/file-system.model';
+import { FileSystemNode, FileType, SearchResultNode } from '../models/file-system.model';
 
 export interface ItemReference {
   name: string;
@@ -25,4 +25,7 @@ export abstract class FileSystemProvider {
   // Optional methods for note-taking functionality
   getNote?(path: string[]): Promise<string | undefined>;
   saveNote?(path: string[], content: string): Promise<void>;
+
+  // Optional method for search
+  search?(path: string[], query: string): Promise<SearchResultNode[]>;
 }

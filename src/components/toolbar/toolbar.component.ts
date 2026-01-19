@@ -64,6 +64,7 @@ export class ToolbarComponent {
   renameClick = output<void>();
   shareClick = output<void>();
   deleteClick = output<void>();
+  searchClick = output<void>();
   sortChange = output<SortCriteria>();
   displayModeChange = output<'grid' | 'list'>();
   filterChange = output<string>();

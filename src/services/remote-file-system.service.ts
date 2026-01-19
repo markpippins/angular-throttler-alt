@@ -1,16 +1,16 @@
 import { FileSystemProvider, ItemReference } from './file-system-provider.js';
-import { FileSystemNode } from '../models/file-system.model.js';
+import { FileSystemNode, SearchResultNode } from '../models/file-system.model.js';
 import { FsService } from './fs.service.js';
 import { ServerProfile } from '../models/server-profile.model.js';
+import { SearchService } from './search.service.js';
 
 export class RemoteFileSystemService implements FileSystemProvider {
-  private fsService: FsService;
-  public readonly profile: ServerProfile;
-
-  constructor(profile: ServerProfile, fsService: FsService) {
-    this.profile = profile;
-    this.fsService = fsService;
-  }
+  constructor(
+    public readonly profile: ServerProfile,
+    private fsService: FsService,
+    private searchService: SearchService | null,
+    private userAlias: string | null
+  ) {}
 
   async getContents(path: string[]): Promise<FileSystemNode[]> {
     const response: any = await this.fsService.listFiles(this.profile.brokerUrl, path);
@@ -178,5 +178,12 @@ export class RemoteFileSystemService implements FileSystemProvider {
 
   importTree(destPath: string[], data: FileSystemNode): Promise<void> {
     return Promise.reject(new Error('Import operation is not supported for remote file systems.'));
+  }
+
+  async search(path: string[], query: string): Promise<SearchResultNode[]> {
+    if (!this.searchService || !this.profile.searchUrl || !this.userAlias) {
+      return Promise.reject(new Error('Search is not configured or you are not logged in for this remote connection.'));
+    }
+    return this.searchService.search(this.profile.searchUrl, this.userAlias, path, query);
   }
 }
